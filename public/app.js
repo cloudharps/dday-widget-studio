@@ -54,6 +54,9 @@ const controls = Object.fromEntries(
 );
 const previewWidgetFrame = document.querySelector('#widgetFrame');
 const embedWidgetFrame = document.querySelector('#embedWidgetFrame');
+const previewStage = document.querySelector('.preview-stage');
+const previewResizer = document.querySelector('#previewResizer');
+const previewSizeLabel = document.querySelector('#previewSizeLabel');
 const widgetFrames = [previewWidgetFrame, embedWidgetFrame];
 const widgetTitles = [document.querySelector('#widgetTitle'), document.querySelector('#embedWidgetTitle')];
 const widgetCounts = [document.querySelector('#widgetCount'), document.querySelector('#embedWidgetCount')];
@@ -77,6 +80,16 @@ const widgetResizeObserver = new ResizeObserver((entries) => {
   entries.forEach((entry) => fitWidgetToFrame(entry.target));
 });
 widgetResizeObserver.observe(embedWidgetFrame);
+
+const previewSizeObserver = new ResizeObserver(() => updatePreviewSizeLabel());
+previewSizeObserver.observe(previewWidgetFrame);
+
+let previewResizeState = null;
+previewResizer.addEventListener('pointerdown', startPreviewResize);
+previewResizer.addEventListener('pointermove', movePreviewResize);
+previewResizer.addEventListener('pointerup', stopPreviewResize);
+previewResizer.addEventListener('pointercancel', stopPreviewResize);
+previewResizer.addEventListener('keydown', resizePreviewWithKeyboard);
 
 form.addEventListener('input', updateFromForm);
 form.addEventListener('change', updateFromForm);
@@ -179,12 +192,63 @@ function render(value) {
 
   const previewSize = Number(value.size);
   const previewTitleSize = Math.min(20, Math.max(9, previewSize * 0.22));
-  const previewTitleHeight = value.title ? previewTitleSize + 10 : 0;
   previewWidgetFrame.style.setProperty('--widget-fitted-size', `${previewSize}px`);
   previewWidgetFrame.style.setProperty('--widget-title-size', `${previewTitleSize}px`);
-  previewWidgetFrame.style.minHeight = `${Math.max(210, previewSize * 1.05 + previewTitleHeight + 104)}px`;
 
   requestAnimationFrame(() => fitWidgetToFrame(embedWidgetFrame));
+}
+
+function startPreviewResize(event) {
+  event.preventDefault();
+  previewResizeState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: previewWidgetFrame.getBoundingClientRect().width,
+    startHeight: previewWidgetFrame.getBoundingClientRect().height,
+  };
+  previewResizer.setPointerCapture(event.pointerId);
+}
+
+function movePreviewResize(event) {
+  if (!previewResizeState || event.pointerId !== previewResizeState.pointerId) return;
+  setPreviewSize(
+    previewResizeState.startWidth + event.clientX - previewResizeState.startX,
+    previewResizeState.startHeight + event.clientY - previewResizeState.startY
+  );
+}
+
+function stopPreviewResize(event) {
+  if (!previewResizeState || event.pointerId !== previewResizeState.pointerId) return;
+  previewResizeState = null;
+  if (previewResizer.hasPointerCapture(event.pointerId)) previewResizer.releasePointerCapture(event.pointerId);
+}
+
+function resizePreviewWithKeyboard(event) {
+  const step = event.shiftKey ? 20 : 8;
+  const rect = previewWidgetFrame.getBoundingClientRect();
+  const changes = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step],
+  };
+  if (!changes[event.key]) return;
+  event.preventDefault();
+  setPreviewSize(rect.width + changes[event.key][0], rect.height + changes[event.key][1]);
+}
+
+function setPreviewSize(width, height) {
+  const stageStyle = getComputedStyle(previewStage);
+  const stagePadding = parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
+  const maxWidth = Math.max(240, previewStage.clientWidth - stagePadding);
+  previewWidgetFrame.style.width = `${Math.min(maxWidth, Math.max(240, width))}px`;
+  previewWidgetFrame.style.height = `${Math.min(640, Math.max(120, height))}px`;
+  updatePreviewSizeLabel();
+}
+
+function updatePreviewSizeLabel() {
+  previewSizeLabel.textContent = `${Math.round(previewWidgetFrame.clientWidth)} × ${Math.round(previewWidgetFrame.clientHeight)}`;
 }
 
 function fitWidgetToFrame(frame) {

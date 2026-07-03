@@ -127,9 +127,10 @@
 
         <section class="preview-panel" aria-label="위젯 미리보기">
           <div class="preview-toolbar">
-            <div>
+            <div class="preview-status">
               <span class="status-dot" aria-hidden="true"></span>
               실시간 미리보기
+              <span class="preview-size-label" id="previewSizeLabel">— × —</span>
             </div>
             <button class="text-button" id="openWidgetButton" type="button">위젯만 열기 ↗</button>
           </div>
@@ -137,6 +138,7 @@
             <div class="widget-frame" id="widgetFrame">
               <p class="widget-title" id="widgetTitle"></p>
               <p class="widget-count" id="widgetCount" aria-live="polite"></p>
+              <button class="preview-resizer" id="previewResizer" type="button" aria-label="미리보기 크기 조절" title="드래그해서 미리보기 크기 조절"></button>
             </div>
           </div>
           <div class="link-card">
