@@ -3,9 +3,13 @@ const WIDGET_BASE_WIDTH = 600;
 const WIDGET_BASE_HEIGHT = 220;
 
 const fonts = {
-  sans: 'Inter, Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif',
-  rounded: '"Arial Rounded MT Bold", "NanumSquareRound", Pretendard, system-ui, sans-serif',
-  serif: 'Georgia, "Noto Serif KR", "Batang", serif',
+  'noto-sans': '"Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif',
+  'gowun-dodum': '"Gowun Dodum", "Noto Sans KR", sans-serif',
+  'nanum-gothic': '"Nanum Gothic", "Noto Sans KR", sans-serif',
+  'black-han': '"Black Han Sans", "Noto Sans KR", sans-serif',
+  'noto-serif': '"Noto Serif KR", "Batang", serif',
+  'gowun-batang': '"Gowun Batang", "Noto Serif KR", serif',
+  'nanum-myeongjo': '"Nanum Myeongjo", "Noto Serif KR", serif',
   mono: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
 };
 
@@ -18,11 +22,12 @@ const defaultDate = (() => {
 const defaults = {
   date: defaultDate,
   title: '',
+  titleSize: '16',
   prefix: 'D',
   suffix: '일',
-  tail: '',
-  today: 'DAY',
-  font: 'sans',
+  today: 'D-DAY',
+  note: '',
+  font: 'noto-sans',
   size: '64',
   weight: '700',
   spacing: '0',
@@ -31,7 +36,7 @@ const defaults = {
   fg: '#e0ffff',
   transparent: '0',
   shadow: '0',
-  radius: '24',
+  radius: '0',
 };
 
 const legacyKeys = {
@@ -40,7 +45,7 @@ const legacyKeys = {
   굵기: 'weight',
   접미사: 'suffix',
   머리말: 'prefix',
-  꼬리말: 'tail',
+  꼬리말: 'note',
   간격: 'spacing',
   배경색: 'bg',
   글자색: 'fg',
@@ -60,14 +65,22 @@ const previewSizeLabel = document.querySelector('#previewSizeLabel');
 const widgetFrames = [previewWidgetFrame, embedWidgetFrame];
 const widgetTitles = [document.querySelector('#widgetTitle'), document.querySelector('#embedWidgetTitle')];
 const widgetCounts = [document.querySelector('#widgetCount'), document.querySelector('#embedWidgetCount')];
+const widgetNotes = [document.querySelector('#widgetNote'), document.querySelector('#embedWidgetNote')];
 const outputs = {
+  titleSize: document.querySelector('#titleSizeOutput'),
   size: document.querySelector('#sizeOutput'),
   weight: document.querySelector('#weightOutput'),
   spacing: document.querySelector('#spacingOutput'),
   radius: document.querySelector('#radiusOutput'),
 };
 const toast = document.querySelector('#toast');
+const themeButtons = [...document.querySelectorAll('[data-theme-option]')];
 let toastTimer;
+
+const savedTheme = localStorage.getItem('studio-theme');
+const initialTheme = savedTheme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+setStudioTheme(initialTheme);
+themeButtons.forEach((button) => button.addEventListener('click', () => setStudioTheme(button.dataset.themeOption)));
 
 const isEmbedded = new URLSearchParams(location.search).get('embed') === '1' || window.self !== window.top;
 document.body.classList.toggle('embed-mode', isEmbedded);
@@ -112,7 +125,7 @@ function readState() {
   const next = { ...defaults };
 
   for (const [key, value] of params) {
-    const normalizedKey = legacyKeys[key] || key;
+    const normalizedKey = key === 'tail' ? 'note' : (legacyKeys[key] || key);
     if (normalizedKey in next) next[normalizedKey] = normalizeParam(normalizedKey, value);
   }
 
@@ -129,6 +142,7 @@ function normalizeParam(key, value) {
 function sanitize(value) {
   const safe = { ...defaults, ...value };
   safe.size = clampNumber(safe.size, 16, 160, defaults.size);
+  safe.titleSize = clampNumber(safe.titleSize, 10, 48, defaults.titleSize);
   safe.weight = clampStep(safe.weight, 100, 900, 100, defaults.weight);
   safe.spacing = clampNumber(safe.spacing, -3, 20, defaults.spacing);
   safe.radius = clampNumber(safe.radius, 0, 48, defaults.radius);
@@ -171,11 +185,14 @@ function render(value) {
   const count = countdownText(value);
   widgetTitles.forEach((element) => { element.textContent = value.title; });
   widgetCounts.forEach((element) => { element.textContent = count; });
+  widgetNotes.forEach((element) => { element.textContent = value.note; });
 
   widgetFrames.forEach((frame) => {
     frame.style.setProperty('--widget-bg', value.bg);
     frame.style.setProperty('--widget-fg', value.fg);
     frame.style.setProperty('--widget-size', `${value.size}px`);
+    frame.style.setProperty('--widget-title-base-size', `${value.titleSize}px`);
+    frame.style.setProperty('--widget-note-base-size', `${Math.min(24, Math.max(11, Number(value.size) * 0.22))}px`);
     frame.style.setProperty('--widget-weight', value.weight);
     frame.style.setProperty('--widget-spacing', `${value.spacing}px`);
     frame.style.setProperty('--widget-radius', `${value.radius}px`);
@@ -185,6 +202,7 @@ function render(value) {
     frame.classList.toggle('has-shadow', value.shadow === '1');
   });
 
+  outputs.titleSize.textContent = `${value.titleSize}px`;
   outputs.size.textContent = `${value.size}px`;
   outputs.weight.textContent = value.weight;
   outputs.spacing.textContent = `${value.spacing}px`;
@@ -193,9 +211,11 @@ function render(value) {
   document.querySelector('#fgValue').textContent = value.fg;
 
   const previewSize = Number(value.size);
-  const previewTitleSize = Math.min(20, Math.max(9, previewSize * 0.22));
+  const previewTitleSize = Number(value.titleSize);
+  const previewNoteSize = Math.min(24, Math.max(11, previewSize * 0.22));
   previewWidgetFrame.style.setProperty('--widget-fitted-size', `${previewSize}px`);
   previewWidgetFrame.style.setProperty('--widget-title-size', `${previewTitleSize}px`);
+  previewWidgetFrame.style.setProperty('--widget-note-size', `${previewNoteSize}px`);
 
   requestAnimationFrame(() => fitWidgetToFrame(embedWidgetFrame));
 }
@@ -265,6 +285,7 @@ function updatePreviewSizeLabel() {
 function fitWidgetToFrame(frame) {
   const count = frame.querySelector('.widget-count');
   const title = frame.querySelector('.widget-title');
+  const note = frame.querySelector('.widget-note');
   if (!count || frame.clientWidth === 0 || frame.clientHeight === 0) return;
 
   const frameStyle = getComputedStyle(frame);
@@ -273,26 +294,38 @@ function fitWidgetToFrame(frame) {
   const contentWidth = Math.max(1, frame.clientWidth - paddingX);
   const contentHeight = Math.max(1, frame.clientHeight - paddingY);
   const baseSize = parseFloat(frame.style.getPropertyValue('--widget-size')) || Number(defaults.size);
+  const baseTitleSize = parseFloat(frame.style.getPropertyValue('--widget-title-base-size')) || Number(defaults.titleSize);
+  const baseNoteSize = parseFloat(frame.style.getPropertyValue('--widget-note-base-size')) || 14;
   const frameScale = Math.min(frame.clientWidth / WIDGET_BASE_WIDTH, frame.clientHeight / WIDGET_BASE_HEIGHT);
   let fittedSize = Math.max(8, baseSize * frameScale);
+  const scaledSize = fittedSize;
 
   frame.style.setProperty('--widget-fitted-size', `${fittedSize}px`);
-  frame.style.setProperty('--widget-title-size', `${Math.min(20, Math.max(9, fittedSize * 0.22))}px`);
+  setAccessorySizes(frame, baseTitleSize * frameScale, baseNoteSize * frameScale, 1);
 
   if (count.scrollWidth > contentWidth) {
     fittedSize *= (contentWidth / count.scrollWidth) * 0.98;
   }
 
+  let accessoryRatio = fittedSize / scaledSize;
+  setAccessorySizes(frame, baseTitleSize * frameScale, baseNoteSize * frameScale, accessoryRatio);
   const titleHeight = title && title.textContent ? title.offsetHeight + 10 : 0;
-  const availableCountHeight = Math.max(1, contentHeight - titleHeight);
+  const noteHeight = note && note.textContent ? note.offsetHeight + 12 : 0;
+  const availableCountHeight = Math.max(1, contentHeight - titleHeight - noteHeight);
   const expectedCountHeight = fittedSize * 1.05;
   if (expectedCountHeight > availableCountHeight) {
     fittedSize *= (availableCountHeight / expectedCountHeight) * 0.96;
   }
 
   fittedSize = Math.max(8, fittedSize);
+  accessoryRatio = fittedSize / scaledSize;
   frame.style.setProperty('--widget-fitted-size', `${fittedSize}px`);
-  frame.style.setProperty('--widget-title-size', `${Math.min(20, Math.max(9, fittedSize * 0.22))}px`);
+  setAccessorySizes(frame, baseTitleSize * frameScale, baseNoteSize * frameScale, accessoryRatio);
+}
+
+function setAccessorySizes(frame, titleSize, noteSize, ratio) {
+  frame.style.setProperty('--widget-title-size', `${Math.max(8, titleSize * ratio)}px`);
+  frame.style.setProperty('--widget-note-size', `${Math.max(8, noteSize * ratio)}px`);
 }
 
 function countdownText(value) {
@@ -302,9 +335,16 @@ function countdownText(value) {
   const targetUtc = Date.UTC(year, month - 1, day);
   const difference = Math.round((targetUtc - todayUtc) / DAY_MS);
 
-  if (difference === 0) return `${value.prefix}-${value.today}${value.tail}`;
+  if (difference === 0) return value.today || defaults.today;
   const sign = difference > 0 ? '-' : '+';
-  return `${value.prefix}${sign}${Math.abs(difference)}${value.suffix}${value.tail}`;
+  return `${value.prefix}${sign}${Math.abs(difference)}${value.suffix}`;
+}
+
+function setStudioTheme(theme) {
+  const safeTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = safeTheme;
+  localStorage.setItem('studio-theme', safeTheme);
+  themeButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.themeOption === safeTheme));
 }
 
 function updateEditorUrl(value) {
