@@ -55,7 +55,7 @@ const controls = Object.fromEntries(
 const previewWidgetFrame = document.querySelector('#widgetFrame');
 const embedWidgetFrame = document.querySelector('#embedWidgetFrame');
 const previewStage = document.querySelector('.preview-stage');
-const previewResizer = document.querySelector('#previewResizer');
+const previewResizers = [...document.querySelectorAll('.preview-resizer')];
 const previewSizeLabel = document.querySelector('#previewSizeLabel');
 const widgetFrames = [previewWidgetFrame, embedWidgetFrame];
 const widgetTitles = [document.querySelector('#widgetTitle'), document.querySelector('#embedWidgetTitle')];
@@ -85,11 +85,13 @@ const previewSizeObserver = new ResizeObserver(() => updatePreviewSizeLabel());
 previewSizeObserver.observe(previewWidgetFrame);
 
 let previewResizeState = null;
-previewResizer.addEventListener('pointerdown', startPreviewResize);
-previewResizer.addEventListener('pointermove', movePreviewResize);
-previewResizer.addEventListener('pointerup', stopPreviewResize);
-previewResizer.addEventListener('pointercancel', stopPreviewResize);
-previewResizer.addEventListener('keydown', resizePreviewWithKeyboard);
+previewResizers.forEach((resizer) => {
+  resizer.addEventListener('pointerdown', startPreviewResize);
+  resizer.addEventListener('pointermove', movePreviewResize);
+  resizer.addEventListener('pointerup', stopPreviewResize);
+  resizer.addEventListener('pointercancel', stopPreviewResize);
+  resizer.addEventListener('keydown', resizePreviewWithKeyboard);
+});
 
 form.addEventListener('input', updateFromForm);
 form.addEventListener('change', updateFromForm);
@@ -200,32 +202,39 @@ function render(value) {
 
 function startPreviewResize(event) {
   event.preventDefault();
+  const handle = event.currentTarget;
   previewResizeState = {
+    axis: handle.dataset.resizeAxis,
+    handle,
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
     startWidth: previewWidgetFrame.getBoundingClientRect().width,
     startHeight: previewWidgetFrame.getBoundingClientRect().height,
   };
-  previewResizer.setPointerCapture(event.pointerId);
+  handle.setPointerCapture(event.pointerId);
 }
 
 function movePreviewResize(event) {
   if (!previewResizeState || event.pointerId !== previewResizeState.pointerId) return;
+  const changeWidth = previewResizeState.axis !== 'y';
+  const changeHeight = previewResizeState.axis !== 'x';
   setPreviewSize(
-    previewResizeState.startWidth + event.clientX - previewResizeState.startX,
-    previewResizeState.startHeight + event.clientY - previewResizeState.startY
+    changeWidth ? previewResizeState.startWidth + event.clientX - previewResizeState.startX : previewResizeState.startWidth,
+    changeHeight ? previewResizeState.startHeight + event.clientY - previewResizeState.startY : previewResizeState.startHeight
   );
 }
 
 function stopPreviewResize(event) {
   if (!previewResizeState || event.pointerId !== previewResizeState.pointerId) return;
+  const { handle } = previewResizeState;
   previewResizeState = null;
-  if (previewResizer.hasPointerCapture(event.pointerId)) previewResizer.releasePointerCapture(event.pointerId);
+  if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
 }
 
 function resizePreviewWithKeyboard(event) {
   const step = event.shiftKey ? 20 : 8;
+  const axis = event.currentTarget.dataset.resizeAxis;
   const rect = previewWidgetFrame.getBoundingClientRect();
   const changes = {
     ArrowLeft: [-step, 0],
@@ -234,6 +243,8 @@ function resizePreviewWithKeyboard(event) {
     ArrowDown: [0, step],
   };
   if (!changes[event.key]) return;
+  if (axis === 'x' && changes[event.key][1] !== 0) return;
+  if (axis === 'y' && changes[event.key][0] !== 0) return;
   event.preventDefault();
   setPreviewSize(rect.width + changes[event.key][0], rect.height + changes[event.key][1]);
 }
