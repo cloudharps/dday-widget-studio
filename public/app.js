@@ -52,7 +52,9 @@ const controls = Object.fromEntries(
     .filter((element) => element.name && element.type !== 'radio')
     .map((element) => [element.name, element])
 );
-const widgetFrames = [document.querySelector('#widgetFrame'), document.querySelector('#embedWidgetFrame')];
+const previewWidgetFrame = document.querySelector('#widgetFrame');
+const embedWidgetFrame = document.querySelector('#embedWidgetFrame');
+const widgetFrames = [previewWidgetFrame, embedWidgetFrame];
 const widgetTitles = [document.querySelector('#widgetTitle'), document.querySelector('#embedWidgetTitle')];
 const widgetCounts = [document.querySelector('#widgetCount'), document.querySelector('#embedWidgetCount')];
 const outputs = {
@@ -74,7 +76,7 @@ render(state);
 const widgetResizeObserver = new ResizeObserver((entries) => {
   entries.forEach((entry) => fitWidgetToFrame(entry.target));
 });
-widgetFrames.forEach((frame) => widgetResizeObserver.observe(frame));
+widgetResizeObserver.observe(embedWidgetFrame);
 
 form.addEventListener('input', updateFromForm);
 form.addEventListener('change', updateFromForm);
@@ -174,7 +176,15 @@ function render(value) {
   outputs.radius.textContent = `${value.radius}px`;
   document.querySelector('#bgValue').textContent = value.bg;
   document.querySelector('#fgValue').textContent = value.fg;
-  requestAnimationFrame(() => widgetFrames.forEach(fitWidgetToFrame));
+
+  const previewSize = Number(value.size);
+  const previewTitleSize = Math.min(20, Math.max(9, previewSize * 0.22));
+  const previewTitleHeight = value.title ? previewTitleSize + 10 : 0;
+  previewWidgetFrame.style.setProperty('--widget-fitted-size', `${previewSize}px`);
+  previewWidgetFrame.style.setProperty('--widget-title-size', `${previewTitleSize}px`);
+  previewWidgetFrame.style.minHeight = `${Math.max(210, previewSize * 1.05 + previewTitleHeight + 104)}px`;
+
+  requestAnimationFrame(() => fitWidgetToFrame(embedWidgetFrame));
 }
 
 function fitWidgetToFrame(frame) {

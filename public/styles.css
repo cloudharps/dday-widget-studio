@@ -169,7 +169,7 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 15px; heigh
   border-radius: 24px;
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: auto;
   background-color: #111318;
   background-image: linear-gradient(#191c22 1px, transparent 1px), linear-gradient(90deg, #191c22 1px, transparent 1px);
   background-size: 22px 22px;
