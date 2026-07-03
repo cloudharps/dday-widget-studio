@@ -1,4 +1,6 @@
 const DAY_MS = 86_400_000;
+const WIDGET_BASE_WIDTH = 600;
+const WIDGET_BASE_HEIGHT = 220;
 
 const fonts = {
   sans: 'Inter, Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif',
@@ -68,6 +70,11 @@ document.body.classList.toggle('embed-mode', isEmbedded);
 const state = readState();
 hydrateForm(state);
 render(state);
+
+const widgetResizeObserver = new ResizeObserver((entries) => {
+  entries.forEach((entry) => fitWidgetToFrame(entry.target));
+});
+widgetFrames.forEach((frame) => widgetResizeObserver.observe(frame));
 
 form.addEventListener('input', updateFromForm);
 form.addEventListener('change', updateFromForm);
@@ -167,6 +174,40 @@ function render(value) {
   outputs.radius.textContent = `${value.radius}px`;
   document.querySelector('#bgValue').textContent = value.bg;
   document.querySelector('#fgValue').textContent = value.fg;
+  requestAnimationFrame(() => widgetFrames.forEach(fitWidgetToFrame));
+}
+
+function fitWidgetToFrame(frame) {
+  const count = frame.querySelector('.widget-count');
+  const title = frame.querySelector('.widget-title');
+  if (!count || frame.clientWidth === 0 || frame.clientHeight === 0) return;
+
+  const frameStyle = getComputedStyle(frame);
+  const paddingX = parseFloat(frameStyle.paddingLeft) + parseFloat(frameStyle.paddingRight);
+  const paddingY = parseFloat(frameStyle.paddingTop) + parseFloat(frameStyle.paddingBottom);
+  const contentWidth = Math.max(1, frame.clientWidth - paddingX);
+  const contentHeight = Math.max(1, frame.clientHeight - paddingY);
+  const baseSize = parseFloat(frame.style.getPropertyValue('--widget-size')) || Number(defaults.size);
+  const frameScale = Math.min(frame.clientWidth / WIDGET_BASE_WIDTH, frame.clientHeight / WIDGET_BASE_HEIGHT);
+  let fittedSize = Math.max(8, baseSize * frameScale);
+
+  frame.style.setProperty('--widget-fitted-size', `${fittedSize}px`);
+  frame.style.setProperty('--widget-title-size', `${Math.min(20, Math.max(9, fittedSize * 0.22))}px`);
+
+  if (count.scrollWidth > contentWidth) {
+    fittedSize *= (contentWidth / count.scrollWidth) * 0.98;
+  }
+
+  const titleHeight = title && title.textContent ? title.offsetHeight + 10 : 0;
+  const availableCountHeight = Math.max(1, contentHeight - titleHeight);
+  const expectedCountHeight = fittedSize * 1.05;
+  if (expectedCountHeight > availableCountHeight) {
+    fittedSize *= (availableCountHeight / expectedCountHeight) * 0.96;
+  }
+
+  fittedSize = Math.max(8, fittedSize);
+  frame.style.setProperty('--widget-fitted-size', `${fittedSize}px`);
+  frame.style.setProperty('--widget-title-size', `${Math.min(20, Math.max(9, fittedSize * 0.22))}px`);
 }
 
 function countdownText(value) {
