@@ -50,11 +50,3 @@
 
 위젯에서 제공하는 Noto, 나눔, 고운, 검은고딕 계열은 Google Fonts에서 배포하는 무료 사용 가능 글꼴입니다. 각 글꼴의 라이선스는 [Google Fonts 저장소](https://github.com/google/fonts)의 해당 글꼴 디렉터리에서 확인할 수 있습니다.
 
-## 로컬에서 실행하기
-
-```bash
-npm install
-npm run dev
-```
-
-Cloudflare Pages 배포 디렉터리는 `public`입니다.
