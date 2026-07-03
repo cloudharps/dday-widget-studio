@@ -72,12 +72,8 @@ render(state);
 form.addEventListener('input', updateFromForm);
 form.addEventListener('change', updateFromForm);
 
-document.querySelector('#copyButton').addEventListener('click', () => copyText(widgetUrl(), '임베드 링크를 복사했습니다.'));
-document.querySelector('#copyEmbedButton').addEventListener('click', () => {
-  const escapedUrl = widgetUrl().replaceAll('&', '&amp;');
-  const code = `<iframe src="${escapedUrl}" width="100%" height="240" frameborder="0" allowtransparency="true"></iframe>`;
-  copyText(code, 'iframe 코드를 복사했습니다.');
-});
+document.querySelector('#copyButton').addEventListener('click', () => copyText(editorUrl(), '편집 가능한 링크를 복사했습니다.'));
+document.querySelector('#copyEmbedButton').addEventListener('click', () => copyText(widgetUrl(), '임베드 전용 링크를 복사했습니다.'));
 document.querySelector('#openWidgetButton').addEventListener('click', () => window.open(widgetUrl(), '_blank', 'noopener,noreferrer'));
 document.querySelector('#resetButton').addEventListener('click', () => {
   hydrateForm(defaults);
@@ -201,10 +197,17 @@ function makeParams(value) {
 }
 
 function widgetUrl() {
-  const url = new URL(location.href);
+  const url = new URL(editorUrl());
   const params = makeParams(readForm());
   params.set('embed', '1');
   url.search = params.toString();
+  url.hash = '';
+  return url.toString();
+}
+
+function editorUrl() {
+  const url = new URL(location.href);
+  url.search = makeParams(readForm()).toString();
   url.hash = '';
   return url.toString();
 }
