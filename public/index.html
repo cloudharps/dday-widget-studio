@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="링크 하나로 설정하고 어디든 임베드하는 D-day 위젯" />
+    <title>D-day Widget Studio</title>
+    <link rel="stylesheet" href="/styles.css?v=1" />
+    <script src="/app.js?v=1" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="처음으로">
+          <span class="brand-mark" aria-hidden="true">D</span>
+          <span>D-day Studio</span>
+        </a>
+        <div class="topbar-actions">
+          <button class="button button-ghost" id="resetButton" type="button">초기화</button>
+          <button class="button button-primary" id="copyButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h11v11H8zM5 16H3V3h13v2" /></svg>
+            임베드 링크 복사
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="control-panel" aria-label="위젯 설정">
+          <div class="panel-heading">
+            <p class="eyebrow">CUSTOMIZE</p>
+            <h1>내 위젯 만들기</h1>
+            <p>바꾸는 즉시 URL과 미리보기에 반영됩니다.</p>
+          </div>
+
+          <form id="settingsForm">
+            <section class="settings-section">
+              <h2>내용</h2>
+              <label class="field field-wide">
+                <span>목표일</span>
+                <input type="date" id="targetDate" name="date" />
+              </label>
+              <label class="field field-wide">
+                <span>작은 제목 <small>선택</small></span>
+                <input type="text" id="title" name="title" maxlength="40" placeholder="예: 최종 시험" />
+              </label>
+              <div class="field-grid field-grid-3">
+                <label class="field">
+                  <span>앞 문구</span>
+                  <input type="text" id="prefix" name="prefix" maxlength="12" placeholder="D" />
+                </label>
+                <label class="field">
+                  <span>숫자 뒤</span>
+                  <input type="text" id="suffix" name="suffix" maxlength="12" placeholder="일" />
+                </label>
+                <label class="field">
+                  <span>끝 문구</span>
+                  <input type="text" id="tail" name="tail" maxlength="12" placeholder="" />
+                </label>
+              </div>
+              <label class="field field-wide">
+                <span>당일 문구</span>
+                <input type="text" id="todayText" name="today" maxlength="16" placeholder="DAY" />
+              </label>
+            </section>
+
+            <section class="settings-section">
+              <h2>글자</h2>
+              <label class="field field-wide">
+                <span>글꼴</span>
+                <select id="fontFamily" name="font">
+                  <option value="sans">깔끔한 고딕</option>
+                  <option value="rounded">둥근 고딕</option>
+                  <option value="serif">차분한 명조</option>
+                  <option value="mono">모노스페이스</option>
+                </select>
+              </label>
+              <label class="range-field">
+                <span>글자 크기 <output id="sizeOutput">64px</output></span>
+                <input type="range" id="fontSize" name="size" min="16" max="160" step="1" />
+              </label>
+              <label class="range-field">
+                <span>글자 굵기 <output id="weightOutput">700</output></span>
+                <input type="range" id="fontWeight" name="weight" min="100" max="900" step="100" />
+              </label>
+              <label class="range-field">
+                <span>글자 간격 <output id="spacingOutput">0px</output></span>
+                <input type="range" id="letterSpacing" name="spacing" min="-3" max="20" step="0.5" />
+              </label>
+              <div class="segmented" role="group" aria-label="텍스트 정렬">
+                <input type="radio" name="align" id="alignLeft" value="left" />
+                <label for="alignLeft">왼쪽</label>
+                <input type="radio" name="align" id="alignCenter" value="center" />
+                <label for="alignCenter">가운데</label>
+                <input type="radio" name="align" id="alignRight" value="right" />
+                <label for="alignRight">오른쪽</label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <h2>색상과 효과</h2>
+              <div class="field-grid">
+                <label class="color-field">
+                  <span>배경색</span>
+                  <span class="color-control"><input type="color" id="backgroundColor" name="bg" /><code id="bgValue">#1e1e1e</code></span>
+                </label>
+                <label class="color-field">
+                  <span>글자색</span>
+                  <span class="color-control"><input type="color" id="textColor" name="fg" /><code id="fgValue">#e0ffff</code></span>
+                </label>
+              </div>
+              <label class="switch-row">
+                <span><strong>투명 배경</strong><small>노션 배경을 그대로 사용합니다.</small></span>
+                <input type="checkbox" id="transparent" name="transparent" role="switch" />
+              </label>
+              <label class="switch-row">
+                <span><strong>텍스트 그림자</strong><small>밝은 배경에서 입체감을 더합니다.</small></span>
+                <input type="checkbox" id="textShadow" name="shadow" role="switch" />
+              </label>
+              <label class="range-field">
+                <span>모서리 둥글기 <output id="radiusOutput">24px</output></span>
+                <input type="range" id="borderRadius" name="radius" min="0" max="48" step="1" />
+              </label>
+            </section>
+          </form>
+        </aside>
+
+        <section class="preview-panel" aria-label="위젯 미리보기">
+          <div class="preview-toolbar">
+            <div>
+              <span class="status-dot" aria-hidden="true"></span>
+              실시간 미리보기
+            </div>
+            <button class="text-button" id="openWidgetButton" type="button">위젯만 열기 ↗</button>
+          </div>
+          <div class="preview-stage">
+            <div class="widget-frame" id="widgetFrame">
+              <p class="widget-title" id="widgetTitle"></p>
+              <p class="widget-count" id="widgetCount" aria-live="polite"></p>
+            </div>
+          </div>
+          <div class="link-card">
+            <div>
+              <strong>Notion에 넣기</strong>
+              <p>링크를 복사한 뒤 Notion에서 <kbd>/embed</kbd>를 입력하세요.</p>
+            </div>
+            <button class="icon-button" id="copyEmbedButton" type="button" aria-label="임베드 코드 복사" title="iframe 코드 복사">
+              &lt;/&gt;
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <main class="embed-shell" id="embedShell">
+      <div class="widget-frame" id="embedWidgetFrame">
+        <p class="widget-title" id="embedWidgetTitle"></p>
+        <p class="widget-count" id="embedWidgetCount" aria-live="polite"></p>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
